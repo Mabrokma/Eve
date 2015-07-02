@@ -1,9 +1,9 @@
-% DOES:
+%
 % * create non-movie time traces of different properties: mean fluorescence
 % and number of nuclei transcribing grouped by eve stripe
 % - detect locations of eve stripes / align different nuclei by stripe
+% - allows averaging of multiple nuclei
 % TODO:
-% - allow averaging of multiple nuclei
 % - calculate deviations from normal stripe positions
 % - save .mat files to save repeat calculations?
 
@@ -29,12 +29,13 @@ if SaveFlag && ~exist([cd,filesep,'StripeFigures'], 'dir')
 end
 
 %Parse inputs and determine the number of embryos we're working with
-if ~isempty(varargin) ||
+if ~isempty(varargin)
     %Loop through args to pull out numbers of embryos in each averaging
     %group.  n[] stores the number of each group to be averaged
     %length(n) is the number of different conditions being averaged
     %sum(n) is the total number of embryos being analyzed
     i = 1;
+    n = 1;
     while i <= length(varargin) && isnumeric(varargin{i})
         n(i) = varargin{i};
         i = i+1;
@@ -233,17 +234,19 @@ if AverageFlag
     
     %loop over averaging conditions
     for j = 1:nAvg       
-        stripeSampleSize = NaN(1, defaultStripes);
-        
+        stripeSampleSize = zeros(1, defaultStripes);
+        avgEmbryo(j).meanFluo = zeros(traceLength, defaultStripes);
+        avgEmbryo(j).activeNuclei = zeros(traceLength, defaultStripes);
+    
         %loop over embryos in each averaging condition
         for k = whichEmbryo(j):whichEmbryo(j+1)-1
             %TODO normalize everything to have 7 stripes??
             %do averaging calculations
-            avgEmbryo(j).meanFluo(:,stripes{k}) = ...
-                avgEmbryo(j).meanFluo(:,stripes{k}) ...
+            avgEmbryo(j).meanFluo = ...
+                avgEmbryo(j).meanFluo ...
                 + Embryos(k).meanFluo;
-            avgEmbryo(j).activeNuclei(:,stripes{k}) = ...
-                avgEmbryo(j).activeNuclei(:,stripes{k}) ...
+            avgEmbryo(j).activeNuclei = ...
+                avgEmbryo(j).activeNuclei ...
                 + Embryos(k).activeNuclei;
             
             %how embryos many are we averaging over for each stripe?
@@ -257,9 +260,9 @@ if AverageFlag
         %finish the averaging
         for s = 1:defaultStripes
             avgEmbryo(j).meanFluo(:,s) = ...
-                avgEmbryo.meanFluo(:,s) / stripeSampleSize(s);
+                avgEmbryo(j).meanFluo(:,s) / stripeSampleSize(s);
             avgEmbryo(j).activeNuclei(:,s) = ...
-                avgEmbryo.activeNuclei(:,s) / stripeSampleSize(s);
+                avgEmbryo(j).activeNuclei(:,s) / stripeSampleSize(s);
         end
         %plot all stripes for this 'embryo'
         [activeNucleiFig, meanFluoFig] = ...
@@ -275,9 +278,9 @@ if AverageFlag
     
     %plot stripe by stripe comparisons
     for s = 1:7
-        stripeFig = plotByStripe(s,1:7,avgEmbryo,Conditions);
+        stripeFig = plotByStripe(s,1:7,avgEmbryo,conditions);
         if SaveFlag
-            figSave(stripeFig, [filePrefix, '_Stripe', s])
+            figSave(stripeFig, [filePrefix, 'AVG_Stripe', s])
         end
     end
 end

@@ -1,11 +1,12 @@
-% DOES:
+%
 % * create non-movie time traces of different properties: mean fluorescence
 % and number of nuclei transcribing grouped by eve stripe
 % - detect locations of eve stripes / align different nuclei by stripe
+% - allows averaging of multiple nuclei
 % TODO:
-% - allow averaging of multiple nuclei
 % - calculate deviations from normal stripe positions
 % - save .mat files to save repeat calculations?
+% - calculate fraction of active nuclei rather than absolute number
 
 %Dependencies: 
 %loadCP.m, getParticlesInFrame.m, findStripes.m, plotByStripe.m,
