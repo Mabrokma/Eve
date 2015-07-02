@@ -7,7 +7,8 @@ AssignOnlyFlag = 0;
 PlotFlag = 0;
 
 defaultCentroids = [0.3 0.38 0.46 0.525 0.59 0.67 0.76]';
-if length(stripes) == 1;
+if
+    length(stripes) = 1;
     nStripes = stripes;
 else
     nStripes = length(stripes);
@@ -81,22 +82,34 @@ else
         kmeans(APpos', nStripes, 'Start', centroids, 'MaxIter', 10);
 end
 
-%convert everything to terms of absolute stripes---------------------------
-%First sort clusters in order and assign whichStripe as a sorted
-%whichCluster
 [~, stripeToCluster] = sort(centroids);
 
-whichStripe = NaN(1,length(whichCluster));
-for s = 1:length(centroids)
-    whichStripe(whichCluster==stripeToCluster(s)) = s;
+for s = stripes
+    
 end
 
-%If stripe 1 is not the first stripe, shift everything by 1
-if stripes(1) == 2
-    whichStripe = whichStripe + 1;
-end
-
-%warning('STRIPE FINDING IS BORKED, FIX IT')
+warning('STRIPE FINDING IS BORKED, FIX IT')
+% %convert everything to terms of absolute stripes
+% stripeToCluster = zeros(1,7);
+% whichStripe = zeros(1,length(whichCluster));
+%
+% for s = 1:7
+%     bestD = inf;
+%     for i = 1:nStripes
+%         %compare centroids to the default centroids, assign based on the
+%         %default stripe centroid to which it's closest
+%         thisD = abs(centroids(i) - defaultCentroids(s));
+%         if thisD < bestD
+%             bestD = thisD;
+%             stripeToCluster(s) = i;
+%         end
+%     end
+% end
+% 
+% for s = 1:7
+%     %take whichcluster and turn it into whichstripe
+%     whichStripe(whichCluster==stripeToCluster(s)) = s;
+% end
 
 %Assign fluorescence values to the relevant stripe
 stripeData = cell(1,7);
@@ -115,8 +128,7 @@ if PlotFlag
         [posCounts, edges] = histcounts(APbyStripe{i}, 'BinWidth', 0.01);
         centers = [edges(1)-0.005, edges + 0.005];
         plot(centers, [0, posCounts, 0], 'Linewidth', 2)
-        plot(centroids(stripeToCluster(i))*ones(1,2), [0 100],...
-            'k','--', 'Linewidth', 2)
+        plot(centroids(i)*ones(1,2), [0 100],'--', 'Linewidth', 2)
     end
     axis([0.25 0.75 0 10])
     
