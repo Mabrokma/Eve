@@ -153,12 +153,15 @@ if PlotFlag
     ClusterFig = figure;
     
     hold on
-    for i = 1:nStripes
-        [posCounts, edges] = histcounts(APbyStripe{i}, 'BinWidth', 0.01);
+    for s = 1:nStripes
+        [posCounts, edges] = histcounts(APbyStripe{s}, 'BinWidth', 0.01);
         centers = [edges(1)-0.005, edges + 0.005];
         plot(centers, [0, posCounts, 0], 'Linewidth', 2)
-        plot(centroids(stripeToCluster(i))*ones(1,2), [0 100],...
-            'k','--', 'Linewidth', 2)
+        %Repeat same color
+        ax = gca; ax.ColorOrderIndex = ax.ColorOrderIndex - 1;
+        
+        plot([centroids(s) centroids(s)], [0 100],...
+            '--', 'Linewidth', 2)
     end
     axis([0.25 0.75 0 10])
     

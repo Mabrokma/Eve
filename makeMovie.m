@@ -33,17 +33,16 @@ nParticles = NaN(1, nEmbryos);
 nFrames = NaN(1, nEmbryos);
 movieLength = 120; %number of frames
 syncedFrames = NaN(nEmbryos, movieLength);
-colors = {[1 0 0], [1 0 0], [0 0 1], [0 0 1], [0 0 1]};
 %TODO - allow for infinite colors or cycle through or something
 
 %Properties to use for distributions (binning etc.)
 %TODO - make this customizable via input
 %TODO - make axes depend on these
-posBins = [0.25:0.01:0.75];
+posBins = 0.25:0.01:0.75;
 posBinCenters = posBins + 0.005; 
 posBinCenters(end) = [];
 
-fluoBins = [0:250:7000];
+fluoBins = 0:250:7000;
 fluoBinCenters = fluoBins + 125; 
 fluoBinCenters(end) = [];
 
@@ -105,7 +104,7 @@ for t = 1:movieLength
     % i.e. transcribing nuclei as a fraction of total nuclei in a given
     % slice, excluding disapproved nuclei (?) - see if this makes a dif
     for k = 1:nEmbryos
-        [allPosInFrame{k} allFluoInFrame{k}] = ...
+        [allPosInFrame{k}, allFluoInFrame{k}] = ...
             getParticlesInFrame(C{k}, syncedFrames(k,t));
     end
 %--------------------------------------------------------------------------
@@ -120,9 +119,9 @@ for t = 1:movieLength
     for k = 1:nEmbryos
         fluoCounts{k} = histcounts(allFluoInFrame{k}, fluoBins);
         meanFluo = mean(allFluoInFrame{k});
-        h(k) = plot(fluoBinCenters, fluoCounts{k}, 'Color', colors{k});
+        h(k) = plot(fluoBinCenters, fluoCounts{k});
         plot([meanFluo meanFluo], [0 25],...
-            '--', 'LineWidth', 2, 'Color', colors{k})
+            '--', 'LineWidth', 2)
     end
     
     %Customize axes for fluoDistFig
@@ -151,7 +150,7 @@ for t = 1:movieLength
     for k = 1:nEmbryos
         posCounts{k} = histcounts(allPosInFrame{k}, posBins);
         plot(posBinCenters, posCounts{k},...
-            'Linewidth', 2,'Color', colors{k})
+            'Linewidth', 2)
     end
     
     %Customize axes for posDistFig
