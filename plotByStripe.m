@@ -14,10 +14,19 @@ stripeFig = figure('units','normalized','outerposition',[0 0 1 0.5]);
 %right plot - fluorescence
 subplot(1,2,2)
 hold on
+h = zeros(1,nEmbryos);
 for k = 1:nEmbryos
     if ~isempty(Embryos(k).meanFluo(:,thisStripe))
-        plot(1:traceLength, Embryos(k).meanFluo(:,thisStripe),...
-            'linewidth', 2)
+        h(k) = plot(1:traceLength, Embryos(k).meanFluo(:,thisStripe),...
+            'linewidth', 2);
+        
+        if isfield(Embryos, 'errFluo')
+            %Keep colors consistent when plotting error bars
+            ax = gca;
+            ax.ColorOrderIndex = ax.ColorOrderIndex - 1;
+            errorbar(1:traceLength, Embryos(k).meanFluo(:,thisStripe),...
+                Embryos(k).errFluo(:,thisStripe))
+        end
     else
         %Throw blank plots to keep colors consistent
         plot(0,0, '--')
@@ -34,8 +43,16 @@ subplot(1,2,1)
 hold on
 for k = 1:nEmbryos
     if ~isempty(Embryos(k).activeNuclei(:,thisStripe))
-        plot(1:traceLength, Embryos(k).activeNuclei(:,thisStripe),...
-            'linewidth', 2)
+        h(k) = plot(1:traceLength, Embryos(k).activeNuclei(:,thisStripe),...
+            'linewidth', 2);
+        if isfield(Embryos, 'errNuclei')
+            %Keep colors consistent when plotting error bars
+            ax = gca;
+            ax.ColorOrderIndex = ax.ColorOrderIndex - 1;
+            errorbar(1:traceLength, ...
+                Embryos(k).activeNuclei(:,thisStripe), ...
+                Embryos(k).errNuclei(:,thisStripe))
+        end
     else
         %Throw blank plots to keep colors consistent
         plot(0,0, '--')
@@ -44,5 +61,6 @@ end
 title(['Stripe #', num2str(thisStripe),...
     ': Transcribing nuclei over time'])
 xlabel('Frame Number')
-ylabel('Number of Transcribing Nuclei')
+ylabel('Fraction of Transcribing Nuclei')
+axis([0, traceLength, 0, 1])
 legend(Prefix, 'Location', 'Best')

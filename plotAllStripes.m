@@ -37,7 +37,7 @@ for s = 1:7
         plot(0,0, '--')
     end
     xlabel('Frame Number')
-    ylabel('Number of Transcribing Nuclei')
+    ylabel('Fraction of Transcribing Nuclei')
     title(['Transcribing nuclei over time: ', Prefix])
     leg{s} = ['Stripe #', num2str(s)];
 end

@@ -1,5 +1,4 @@
-%
-% * create non-movie time traces of different properties: mean fluorescence
+% plot time traces of different properties: mean fluorescence
 % and number of nuclei transcribing grouped by eve stripe
 % - detect locations of eve stripes / align different nuclei by stripe
 % - allows averaging of multiple nuclei
@@ -86,7 +85,7 @@ for k = 1:nEmbryos
     loadPath = uigetdir(cd, ['Choose processed data set #', num2str(k)]);
     try
         E{k} = load([loadPath,filesep, 'CompiledParticles.mat'],...
-            'CompiledParticles', 'ElapsedTime', 'nc14');
+            'CompiledParticles', 'ElapsedTime', 'nc14', 'NEllipsesAP');
     catch
         error('CompiledParticles.mat not found')
     end
@@ -165,17 +164,20 @@ for k = 1:nEmbryos
         %STRIPE FINDING FLOW
         if t == startFrame || t == startFrame+1
             %First step, run findStripes with default centroids
-            [Embryos(k).stripeData(t,:), centroids, stripes{k}] = ...
-                findStripes(pos, fluo, nStripes, ClusterPlotFlag);
+            [Embryos(k).stripeData(t,:), nucPerStripe, centroids, ...
+                stripes{k}] = findStripes(pos, fluo, nStripes, ...
+                E{k}.NEllipsesAP(syncedFrames(k,t),:), ClusterPlotFlag);
         elseif t > transitionFrame && t < startFrame
             %Frames with recognizable stripes, use clustering
-            [Embryos(k).stripeData(t,:), centroids] = ...
-                findStripes(pos, fluo, stripes{k}, centroids,...
+            [Embryos(k).stripeData(t,:), nucPerStripe, centroids] = ...
+                findStripes(pos, fluo, stripes{k},...
+                E{k}.NEllipsesAP(syncedFrames(k,t),:), centroids,...
                 ClusterPlotFlag);
         else
             %Frames without recognizable stripes, use simple assignment
-            Embryos(k).stripeData(t,:) = ...
-                findStripes(pos, fluo, stripes{k}, centroids,...
+            [Embryos(k).stripeData(t,:), nucPerStripe] = ...
+                findStripes(pos, fluo, stripes{k},...
+                E{k}.NEllipsesAP(syncedFrames(k,t),:), centroids,...
                 'AssignOnly', ClusterPlotFlag);
         end
                 
@@ -186,7 +188,7 @@ for k = 1:nEmbryos
             Embryos(k).meanFluo(t,s) = ...
                 nanmean(Embryos(k).stripeData{t,s});
             Embryos(k).activeNuclei(t,s) = ...
-                length(Embryos(k).stripeData{t,s});
+                length(Embryos(k).stripeData{t,s})/nucPerStripe(s);
         end
     end
     fprintf('Done!\n')
@@ -227,47 +229,40 @@ if AverageFlag
     end
     
     %hold new avg structures in a struct array, equivalent to Embryos()
-    avgEmbryo = struct;
+    AvgEmbryo = struct;
     %full stripe data will be necessary for errorbars, until then, w/e
     %avgEmbryo(nAvg).stripeData = cell(traceLength, defaultStripes);
-    avgEmbryo(nAvg).meanFluo = zeros(traceLength, defaultStripes);
-    avgEmbryo(nAvg).activeNuclei = zeros(traceLength, defaultStripes);
+    AvgEmbryo(nAvg).meanFluo = NaN(traceLength, defaultStripes);
+    AvgEmbryo(nAvg).activeNuclei = NaN(traceLength, defaultStripes);
     
     %loop over averaging conditions
     for j = 1:nAvg       
-        stripeSampleSize = zeros(1, defaultStripes);
-        avgEmbryo(j).meanFluo = zeros(traceLength, defaultStripes);
-        avgEmbryo(j).activeNuclei = zeros(traceLength, defaultStripes);
+        AvgEmbryo(j).meanFluo = zeros(traceLength, defaultStripes);
+        AvgEmbryo(j).activeNuclei = zeros(traceLength, defaultStripes);
     
+        allFluo = NaN(traceLength, defaultStripes, n(j));
+        allNuclei = NaN(traceLength, defaultStripes, n(j));
         %loop over embryos in each averaging condition
         for k = whichEmbryo(j):whichEmbryo(j+1)-1
-            %TODO normalize everything to have 7 stripes??
-            %do averaging calculations
-            avgEmbryo(j).meanFluo = ...
-                avgEmbryo(j).meanFluo ...
-                + Embryos(k).meanFluo;
-            avgEmbryo(j).activeNuclei = ...
-                avgEmbryo(j).activeNuclei ...
-                + Embryos(k).activeNuclei;
+            %Index that starts from 1
+            kCorr = k - whichEmbryo(j) + 1;
             
-            %how embryos many are we averaging over for each stripe?
-            for s = 1:7
-                if ~isempty(find(stripes{k}(stripes{k} == s),1))
-                    stripeSampleSize(s) = stripeSampleSize(s) + 1;
-                end
-            end
+            %store everything in a temporary cell before averaging
+            allFluo(:,:,kCorr) = Embryos(k).meanFluo;
+            allNuclei(:,:,kCorr) = Embryos(k).activeNuclei;
         end
         
-        %finish the averaging
-        for s = 1:defaultStripes
-            avgEmbryo(j).meanFluo(:,s) = ...
-                avgEmbryo(j).meanFluo(:,s) / stripeSampleSize(s);
-            avgEmbryo(j).activeNuclei(:,s) = ...
-                avgEmbryo(j).activeNuclei(:,s) / stripeSampleSize(s);
-        end
+        %do the averaging
+        AvgEmbryo(j).meanFluo = nanmean(allFluo, 3);
+        AvgEmbryo(j).errFluo = nanstd(allFluo, 0, 3)/sqrt(n(j));
+        
+        AvgEmbryo(j).activeNuclei = nanmean(allNuclei, 3);
+        AvgEmbryo(j).errNuclei = nanstd(allNuclei, 0, 3)/sqrt(n(j));
+        
+        
         %plot all stripes for this 'embryo'
-        [activeNucleiFig, meanFluoFig] = ...
-            plotAllStripes(1:7, avgEmbryo(j), conditions{j});
+        [meanFluoFig, activeNucleiFig] = ...
+            plotAllStripes(1:7, AvgEmbryo(j), conditions{j});
         %Save
         if SaveFlag
             figSave(activeNucleiFig, ...
@@ -279,7 +274,7 @@ if AverageFlag
     
     %plot stripe by stripe comparisons
     for s = 1:7
-        stripeFig = plotByStripe(s,1:7,avgEmbryo,conditions);
+        stripeFig = plotByStripe(s,1:7,AvgEmbryo,conditions);
         if SaveFlag
             figSave(stripeFig, [filePrefix, 'AVG_Stripe', s])
         end

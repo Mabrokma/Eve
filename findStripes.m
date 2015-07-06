@@ -1,12 +1,14 @@
 %use 1-D kmeans clustering for finding stripes
 
-function [stripeData, centroids, stripes] = ...
-    findStripes(APpos, fluo, stripes, varargin)
+function [stripeData, nucPerStripe, centroids, stripes] = ...
+    findStripes(APpos, fluo, stripes, nNuclei, varargin)
 %Flags
 AssignOnlyFlag = 0;
 PlotFlag = 0;
 
-defaultCentroids = [0.3 0.38 0.46 0.525 0.59 0.67 0.76]';
+DEFAULT_CENTROIDS = [0.3 0.38 0.46 0.525 0.59 0.67 0.76]';
+MAX_STRIPE_RADIUS = 0.05;
+
 if length(stripes) == 1;
     nStripes = stripes;
 else
@@ -33,20 +35,20 @@ else
     %max and min of APpos and tossing the farther from the edge bin
     
     if nStripes == 6;
-        skipFirst = abs(min(APpos) - defaultCentroids(1)) > ...
-            abs(max(APpos) - defaultCentroids(7));
+        skipFirst = abs(min(APpos) - DEFAULT_CENTROIDS(1)) > ...
+            abs(max(APpos) - DEFAULT_CENTROIDS(7));
         if skipFirst
-            centroids = defaultCentroids(2:7);
+            centroids = DEFAULT_CENTROIDS(2:7);
             stripes = 2:7;
         else
-            centroids = defaultCentroids(1:6);
+            centroids = DEFAULT_CENTROIDS(1:6);
             stripes = 1:6;
         end
     elseif nStripes == 7;
-        centroids = defaultCentroids;
+        centroids = DEFAULT_CENTROIDS;
         stripes = 1:7;
     elseif nStripes == 5;
-        centroids = defaultCentroids(2:6);
+        centroids = DEFAULT_CENTROIDS(2:6);
         stripes = 2:6;
     else
         error('Stripes too irregular to cluster w/o seeds')
@@ -78,32 +80,72 @@ else
     %Clustering mode: Use built-in matlab kmeans to cluster particles
     %(inputs need to be column vectors)
     [whichCluster, centroids] = ...
-        kmeans(APpos', nStripes, 'Start', centroids, 'MaxIter', 10);
+        kmeans(APpos', nStripes, 'Start', centroids, 'MaxIter', 20);
 end
+
+%filter outliers (d > MAX_STRIPE_RADIUS)
+for i = 1:length(APpos)
+    if APpos(i) - centroids(whichCluster(i)) > MAX_STRIPE_RADIUS
+        whichCluster(i) = NaN;
+    end
+end
+
 
 %convert everything to terms of absolute stripes---------------------------
 %First sort clusters in order and assign whichStripe as a sorted
 %whichCluster
-[~, stripeToCluster] = sort(centroids);
+[centroids, stripeToCluster] = sort(centroids);
 
 whichStripe = NaN(1,length(whichCluster));
 for s = 1:length(centroids)
     whichStripe(whichCluster==stripeToCluster(s)) = s;
 end
 
-%If stripe 1 is not the first stripe, shift everything by 1
-if stripes(1) == 2
-    whichStripe = whichStripe + 1;
+nucWhichStripe = NaN(1,length(nNuclei));
+for i = 1:length(nNuclei)
+    bestD = Inf;
+    %cycle through centroids, find out which one is closest
+    for j = 1:nStripes
+        if abs(centroids(j) - (i-1)/100) < bestD;
+            bestD = abs(centroids(j) - (i-1)/100);
+            if bestD < MAX_STRIPE_RADIUS;
+                nucWhichStripe(i) = j;
+            end
+        end
+    end
 end
 
-%warning('STRIPE FINDING IS BORKED, FIX IT')
+
+%If stripe 1 is not the first stripe, shift everything by 1
+%todo - deal with fewer stripes than 5
+if stripes(1) == 2
+    whichStripe = whichStripe + 1;
+    nucWhichStripe = nucWhichStripe + 1;
+end
+
+%Calculate total nuclei in each stripe
+nucPerStripe = zeros(1,7);
+for i = 1:length(nNuclei)
+    try
+        nucPerStripe(nucWhichStripe(i)) = ...
+            nucPerStripe(nucWhichStripe(i)) + nNuclei(i);
+    catch
+        %Do nothing if nucWhichStripe(i) == NaN
+    end
+end
+%Convert zeros to nans
+nucPerStripe(nucPerStripe == 0) = NaN;
 
 %Assign fluorescence values to the relevant stripe
 stripeData = cell(1,7);
 APbyStripe = cell(1,7);
 for i = 1:length(APpos)
-    stripeData{whichStripe(i)}(end+1) = fluo(i);
-    APbyStripe{whichStripe(i)}(end+1) = APpos(i);
+    try
+        stripeData{whichStripe(i)}(end+1) = fluo(i);
+        APbyStripe{whichStripe(i)}(end+1) = APpos(i);
+    catch
+        %This is for entries in whichStripe that were replaced with NaNs
+    end
 end
 
 %Plot results for debugging------------------------------------------------
