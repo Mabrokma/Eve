@@ -16,7 +16,7 @@ cpByStripe = cell(1,7);
 firstFrame = cp.nc14;
 frameOfnc14 = firstFrame:length(cp.ElapsedTime);
 
-binSize = cp.APbinID(1);
+binSize = cp.APbinID(2);
 
 %Determine which stripes are present in the viewing window
 %TODO - make these frames determined dynamically
@@ -40,29 +40,40 @@ for t = clusterRange
     
     %Make histogram of frame, smooth, count peaks as proxy for stripes
     posCounts = histcounts(APpos{T}, cp.APbinID);
-    w = 3; %moving window size
+    w = 4; %moving window size
     smoothCounts = conv(posCounts, ones(1,w)/w, 'same'); %filter
     [~,potentialCentroids{T}] = findpeaks(smoothCounts);
     potentialCentroids{T} = potentialCentroids{T}*binSize - binSize/2;
     foundStripes(t) = length(potentialCentroids{T});
     
+    distancesFromCentroids = ...
+        abs(potentialCentroids{T}(1)-DEFAULT_CENTROIDS);
     %Compare found centroids to default centroids
-    [d, left(t)] = min(abs(potentialCentroids{T}(1)-DEFAULT_CENTROIDS));
+    [d, left(T)] = min(distancesFromCentroids);
 end
 nStripes = mode(foundStripes);
 firstStripe = mode(left);
+lastStripe = firstStripe+nStripes-1;
+fprintf('Stripes detected: %d', nStripes);
+if lastStripe > 7
+    fprintf('Trimming extraneous stripes\n');
+    nStripes = length(firstStripe:7);
+    lastStripe = 7;
+end
 
 %First use AllTracesVector to perform clustering on particles alone
 %THOUGHT - Cluster in the middle of nc14, only with particles that are
 %active at that time, then do assignment based on mean AP positions
 %i.e. each particle gets assigned to only one cp structure
+fprintf('Clustering on stripes %d - %d\n', firstStripe, lastStripe);
 centroids = NaN(length(frameOfnc14), nStripes);
 T = 0;
 for t = clusterRange
     %Captial T for indexing w/i clusterRange
     T = T+1;
     %Do clustering in the mid-nc14 period while stripes are well-defined
-    [~, centroids(t,:)] = kmeans(APpos{T}', nStripes);
+    [~, centroids(t,:)] = kmeans(APpos{T}', nStripes, ...
+        'Start', DEFAULT_CENTROIDS(firstStripe:lastStripe));
     centroids(t,:) = sort(centroids(t,:));
 end
 %Set the centroids for the edges
@@ -95,6 +106,6 @@ end
 whichStripe = whichStripe + firstStripe - 1;
 
 %Assign elements of CompiledParticles based on clustering to the cell
-for s = 1:nStripes
+for s = firstStripe:lastStripe
     cpByStripe{s} = cp.CompiledParticles(whichStripe==s);
 end
