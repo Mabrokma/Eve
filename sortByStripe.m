@@ -5,7 +5,7 @@
 %
 
 %The arg cp is a compiled particles stucture
-function [cpByStripe] = sortByStripe(cp)
+function [cpByStripe, centroids] = sortByStripe(cp)
 DEFAULT_CENTROIDS = [0.3 0.38 0.46 0.525 0.59 0.67 0.76]';
 nParticles = length(cp.CompiledParticles);
 %Each entry in the cell will be a CompiledParsticles-style structure for the
@@ -54,12 +54,15 @@ end
 nStripes = mode(foundStripes);
 firstStripe = mode(left);
 lastStripe = firstStripe+nStripes-1;
-fprintf('Stripes detected: %d', nStripes);
+
+fprintf('Stripes detected: %d\n', nStripes);
 if lastStripe > 7
     fprintf('Trimming extraneous stripes\n');
     nStripes = length(firstStripe:7);
     lastStripe = 7;
 end
+
+stripeNumber = firstStripe:lastStripe;
 
 %First use AllTracesVector to perform clustering on particles alone
 %THOUGHT - Cluster in the middle of nc14, only with particles that are
@@ -83,9 +86,54 @@ centroids(earlyRange,:) = repmat(earlyCentroids,length(earlyRange),1);
 lateCentroids = mean(centroids(clusterRange(end-2:end),:));
 centroids(lateRange,:) = repmat(lateCentroids,length(lateRange),1);
 
-%TODO- Curate the centroids here
+%Curate the centroids here
+meanCentroids = mean(centroids);
+fprintf('\nStripe Number | Default Centroid | Mean Centroid\n')
 
+for s = stripeNumber
+    fprintf('      %1d       |       %3.2f       |      %3.2f     \n',...
+        s, DEFAULT_CENTROIDS(s), meanCentroids(s-firstStripe+1))
+end
 
+%Filter centroids that fall larger than a certain tolerance from the mean
+%centroid of that stripe.  Replace it with the average of the two adjacent
+tolerance = 0.02;
+for s = 1:nStripes
+    %edge
+    t = clusterRange(1);
+    if centroids(t,s) - meanCentroids(s) > tolerance
+        bad = centroids(t,s);
+        centroids(t,s) = centroids(t+1,s);
+        fprintf('Intolerable centroid in Frame: %d, Stripe: %d\n',...
+            t,stripeNumber(s))
+        fprintf('Default: %3.2f, Mean: %3.2f, Old: %3.2f, New: %3.2f\n',...
+            DEFAULT_CENTROIDS(stripeNumber(s)), meanCentroids(s),...
+            bad, centroids(t,s))
+    end
+    %center
+    for t = clusterRange(2:end-1)
+        if abs(centroids(t,s) - meanCentroids(s)) > tolerance
+            bad = centroids(t,s);
+            centroids(t,s) = (centroids(t+1,s) + centroids(t-1,s))/2;
+            fprintf('Intolerable centroid in Frame: %d, Stripe: %d\n',...
+                t,stripeNumber(s))
+            fprintf('Default: %3.2f, Mean: %3.2f, Old: %3.2f, New: %3.2f\n',...
+                DEFAULT_CENTROIDS(stripeNumber(s)), meanCentroids(s),...
+                bad, centroids(t,s))
+        end
+    end
+    %edge
+    t = clusterRange(end);
+    if centroids(t,s) - meanCentroids(s) > tolerance
+        bad = centroids(t,s);
+        centroids(t,s) = centroids(t-1,s);
+        fprintf('Intolerable centroid in Frame: %d, Stripe: %d\n',...
+            t,stripeNumber(s))
+        fprintf('Default: %3.2f, Mean: %3.2f, Old: %3.2f, New: %3.2f\n',...
+            DEFAULT_CENTROIDS(stripeNumber(s)), meanCentroids(s),...
+            bad, centroids(t,s))
+    end
+end
 
 %Centroids will be a vector with a value at each time point, particles will
 %be assigned to stripes based on the centroid they are closest to in the
