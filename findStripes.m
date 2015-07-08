@@ -7,7 +7,7 @@ AssignOnlyFlag = 0;
 PlotFlag = 0;
 
 DEFAULT_CENTROIDS = [0.3 0.38 0.46 0.525 0.59 0.67 0.76]';
-MAX_STRIPE_RADIUS = 0.05;
+MAX_STRIPE_RADIUS = 0.04;
 
 if length(stripes) == 1;
     nStripes = stripes;
