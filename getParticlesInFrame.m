@@ -15,7 +15,7 @@ for i = 1:length(CP)
         % CP(indices(n,1).FIELD(indices(n,2))) is the value of the field
         % for the given particle and frame
         indices(end+1,1) = i;
-        indices(end+1,2) = thisFrame;
+        indices(end,2) = thisFrame;
         
         %use index to find fluorescence and AP position
         thisPos = thisParticle.APposParticle(thisFrame);

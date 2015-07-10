@@ -2,10 +2,12 @@
 % and number of nuclei transcribing grouped by eve stripe
 % - detect locations of eve stripes / align different nuclei by stripe
 % - allows averaging of multiple nuclei
+
+% 
+
 % TODO:
 % - calculate deviations from normal stripe positions
 % - save .mat files to save repeat calculations?
-% - calculate fraction of active nuclei rather than absolute number
 
 %Dependencies: 
 %loadCP.m, getParticlesInFrame.m, findStripes.m, plotByStripe.m,
@@ -44,7 +46,7 @@ if ~isempty(varargin)
     %keep track of total embryos / if there will be averaging
     nEmbryos = sum(n);
     nAvg = length(n);
-    if nAvg > 1
+    if nEmbryos > 1
         AverageFlag = 1;
     end
     

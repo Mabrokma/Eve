@@ -5,7 +5,7 @@
 %
 
 %The arg cp is a CompiledParticles.mat file
-function [cpByStripe, centroids] = sortByStripe(cp)
+function [cpByStripe, cp, centroids] = sortByStripe(cp)
 
 DEFAULT_CENTROIDS = [0.3 0.38 0.46 0.525 0.59 0.67 0.76]';
 nParticles = length(cp.CompiledParticles);
@@ -102,7 +102,7 @@ end
 
 %Filter centroids that fall larger than a certain tolerance from the mean
 %centroid of that stripe.  Replace it with the average of the two adjacent
-tolerance = 0.02;
+tolerance = 0.045;
 for s = 1:nStripes
     %edge
     t = clusterRange(1);
@@ -143,14 +143,26 @@ end
 %Centroids will be a vector with a value at each time point, particles will
 %be assigned to stripes based on the centroid they are closest to in the
 %first frame in which they appear
+%Add centroids to orignal cp structure
+
 whichStripe = NaN(1,nParticles);
 for i = 1:nParticles
-    %Figure out initial frame and position of the particle
-    frame = cp.CompiledParticles(i).FirstFrame;
-    pos = cp.CompiledParticles(i).APpos(1);
-    
-    [cp.CompiledParticles(i).D2Centroid, whichStripe(i)] = ...
-        min(abs(centroids(frame,:) - pos));
+    try
+        %Figure out initial frame and position of the particle
+        frame = cp.CompiledParticles(i).FirstFrame;
+        pos = cp.CompiledParticles(i).APpos(1);
+        
+        %Assign to stripe by closest centroid
+        [~, whichStripe(i)] = min(abs(centroids(frame-frameShift,:)- pos));
+        
+        %Add stripe and distance to centorid to original structure
+        cp.CompiledParticles(i).whichStripe = whichStripe(i) + stripeShift;
+        cp.CompiledParticles(i).d2Centroid = ...
+            pos - centroids(frame-frameShift,whichStripe(i));
+    catch
+        %Kluge cuz i'm lazy - when i have time, sort out the first particle
+        %of nc14
+    end
 end
 
 %Shift over if any stripes are missing
@@ -198,5 +210,3 @@ for t = firstFrame:lastFrame
         cpByStripe{3,s}{t - frameShift} = pos(whichStripe==s);
     end
 end
-
-
