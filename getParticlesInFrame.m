@@ -18,7 +18,7 @@ for i = 1:length(CP)
         indices(end,2) = thisFrame;
         
         %use index to find fluorescence and AP position
-        thisPos = thisParticle.APposParticle(thisFrame);
+        thisPos = thisParticle.APpos(thisFrame);
         thisFluo = thisParticle.Fluo(thisFrame);
         
         %add to running structure that holds everything
