@@ -1,0 +1,114 @@
+function [alignedGenotype, avgAligned] = alignEmbryos(genotype)
+%**************************************************************************
+% Take an entire genotype of processed data and slightly shift or scale to
+% minimize the covariance between binned expression patterns (over time).
+% The logic is that there is sufficient error in the viewing window vs.
+% full embryo and in the variance of the pattern itself, so if we want to
+% consider stripe-specific or stripe-border-specific qualities of traces,
+% we want respective stripe-n's to agree as much as possible in expression.
+%
+% We limit alignment to minimal shifts (+/- 2%AP) and scales (+/-5%)
+%
+%
+% RW 8/2015
+%**************************************************************************
+tic;
+%Limits on shifting and scaling
+maxShift = 0.02;
+%shiftStep = 0.001;
+maxScale = 0.1;
+%scaleStep = 0.01;
+
+% nTrials = (2*maxShift/shiftStep) * (2*maxScale/scaleStep) ...
+%     * (length(genotype)-1);
+
+%Explore parameter space exhaustively and linearly
+%May change this to something better later idk
+
+%Use standardTraces (for nc14) to align.  Do correlation on 1% bins,
+%repeatedly shift/scale until all combinations are exhausted, keep track of
+%best alignment
+template = genotype(1).binTraces(:,:,1);
+alignedGenotype = genotype;
+
+usedShifts = zeros(1,length(genotype)-1);
+usedScales = zeros(1,length(genotype)-1);
+MSDs = zeros(1,length(genotype)-1);
+
+% trial = 0;
+parfor i = 2:length(genotype)  
+    %Simmulated Annealing Approach:
+    objfun = @(x) calculateMSD(x(1), x(2), template, genotype(i));
+    [params, MSDs(i-1), ~, output] = simulannealbnd(...
+        objfun, [0 0], [-maxShift 1-maxScale], [maxShift 1+maxScale]);
+    bestShift = params(1);
+    bestScale = params(2);
+    
+    fprintf('Number of iterations for Embryo %i: %i\n',...
+        i, output.iterations)
+%     bestMSD = Inf;
+%     
+%     %This is the exhaustive search, probs a bummer
+%     for scale = 1-maxScale:scaleStep:1+maxScale
+%         for shift = -maxShift:shiftStep:maxShift
+%             trial = trial + 1;
+%             waitbar(trial/nTrials, h, 'Aligning expression patterns...')
+%             %Calculate image with given parameters,
+%             [~, test] = standardizeTraces(genotype(i),...
+%                 scale*(0:0.01:1) + shift);
+%             test = test(:,:,1);
+%             
+%             %Compare to unshifted image
+%             sd = (template/max(template(:)) - test/max(test(:))).^2;
+%             msd = nanmean(sd(:));
+%             
+%             if msd < bestMSD
+%                 bestMSD = msd;
+%                 bestShift = shift;
+%                 bestScale = scale;
+%             end
+%         end
+%     end
+%     %Save optimally aligned image to output structure
+    alignedGenotype(i).rawTraces(:,:,3:4) = ...
+        genotype(i).rawTraces(:,:,3:4) + bestShift;
+    [alignedGenotype(i).standardTraces, alignedGenotype(i).binTraces] = ...
+        standardizeTraces(alignedGenotype(i), (0:0.01:1) + bestShift);
+
+    usedShifts(i-1) = bestShift;
+    usedScales(i-1) = bestScale;
+end
+
+ElapsedTime = toc;
+display(ElapsedTime)
+display(usedShifts)
+display(usedScales)
+display(MSDs)
+
+%Generate figure to show how the alignment went
+avgAligned = averageTraces(alignedGenotype);
+avgUnaligned = averageTraces(genotype);
+
+scale = max([max(max(avgUnaligned(:,:,1)))...
+    max(max(avgAligned(:,:,1)))]); %lol
+
+figure; colormap jet;
+subplot(1,2,1)
+imagesc([20 85], [0 60], avgUnaligned(:,20:85,1), [0 scale]);
+title('Unaligned average heatmap')
+
+subplot(1,2,2)
+imagesc([20 85], [0 60], avgAligned(:,20:85,1), [0 scale]);
+title('Aligned average heatmap')
+
+end
+
+function msd = calculateMSD(shift, scale, template, genotype)
+%Calculate image with given parameters,
+[~, test] = standardizeTraces(genotype, scale*(0:0.01:1) + shift);
+test = test(:,:,1);
+
+%Compare to unshifted image
+sd = (template/max(template(:)) - test/max(test(:))).^2;
+msd = nanmean(sd(:));
+end
