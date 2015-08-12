@@ -2,16 +2,20 @@
 %each represent a single eve stripe.  These can be fed into any
 %post-processing code as if it were a true CompiledParticles structure
 %
-%
 
 %The arg cp is a CompiledParticles.mat file
-function [cpByStripe, cp, centroids] = sortByStripe(cp)
+function [cpByStripe, cp, centroids] = sortByStripe(cp, varargin)
+if nargin < 2
+    CurationFlag = 1;
+else
+    CurationFlag = 0;
+end
 
-DEFAULT_CENTROIDS = [0.3 0.38 0.46 0.525 0.59 0.67 0.76]';
+DEFAULT_CENTROIDS = [0.32 0.40 0.46 0.525 0.59 0.69 0.78]';
 nParticles = length(cp.CompiledParticles);
 %Each entry in the cell will be a CompiledParticles-style structure for the
 %corresponding eve stripe
-cpByStripe = cell(3,7);
+cpByStripe = cell(1,7);
 
 %Filter out only nc14
 firstFrame = cp.nc14;
@@ -91,6 +95,7 @@ centroids(earlyRange,:) = repmat(earlyCentroids,length(earlyRange),1);
 lateCentroids = mean(centroids(clusterRange(end-2:end),:));
 centroids(lateRange,:) = repmat(lateCentroids,length(lateRange),1);
 
+
 %Curate the centroids here
 meanCentroids = mean(centroids);
 fprintf('\nStripe Number | Default Centroid | Mean Centroid\n')
@@ -143,6 +148,20 @@ end
 %Centroids will be a vector with a value at each time point, particles will
 %be assigned to stripes based on the centroid they are closest to in the
 %first frame in which they appear
+
+%Calculate borders and pass to GUI for curation
+if CurationFlag
+    %Send clustered centroids to curation program, get fixed borders back
+    [centroids, borders] = curateStripes(cp, centroids);
+else
+    %Set borders without curating
+    borders = NaN(traceLength, nStripes+1);
+    for t = 1:traceLength
+        %Take midpoints of centroids as borders for now + edges
+        borders(t,:) = [0.2 conv(centroids(t,:),[0.5 0.5],'valid') 0.85];
+    end
+end
+
 %Add centroids to orignal cp structure
 
 whichStripe = NaN(1,nParticles);
@@ -155,7 +174,7 @@ for i = 1:nParticles
         %Assign to stripe by closest centroid
         [~, whichStripe(i)] = min(abs(centroids(frame-frameShift,:)- pos));
         
-        %Add stripe and distance to centorid to original structure
+        %Add stripe and distance to centroid to original structure
         cp.CompiledParticles(i).whichStripe = whichStripe(i) + stripeShift;
         cp.CompiledParticles(i).d2Centroid = ...
             pos - centroids(frame-frameShift,whichStripe(i));
@@ -168,45 +187,32 @@ end
 %Shift over if any stripes are missing
 whichStripe = whichStripe + stripeShift;
 
+%GENERATE RETURN STRUCTURES------------------------------------------------
+
+
 %Assign elements of CompiledParticles based on clustering to the cell
 for s = firstStripe:lastStripe
-    cpByStripe{1,s} = cp.CompiledParticles(whichStripe==s);
+    cpByStripe{s} = cp;
+    cpByStripe{s}.CompiledParticles = cp.CompiledParticles(whichStripe==s);
+    cpByStripe{s}.AllTracesVector = cp.AllTracesVector(:,whichStripe==s);
 end
 
-%assign ellipses w/o particles as well
-%initialize structure
-for s = firstStripe:lastStripe
-    cpByStripe{2,s} = cell(1,nFrames);
-    cpByStripe{3,s} = cell(1,nFrames);
-end
-%Assign filtered ellipses to the second row of the cell
-for t = firstFrame:lastFrame
-    pos = cp.EllipsesFilteredPos{t};
-    whichStripe = NaN(1,length(pos));
-    %Calculate nearest stripe
-    for i = 1:length(pos)
-        [~, whichStripe(i)] = min(abs(centroids(t-frameShift,:) - pos(i)));
-    end
-    whichStripe = whichStripe + stripeShift;
-    
-    %Put results into structure
-    for s = firstStripe:lastStripe
-        cpByStripe{2,s}{t - frameShift} = pos(whichStripe==s);
-    end
-end
+%NEED ALL ELLIPSES FOR EVERY STRUCTURE TO DO GOOD FITTING
+% %Assign ellipses to the EllipsePos and FilteredEllipsesPos fields
+% for t = firstFrame:lastFrame
+%     pos = cp.EllipsesFilteredPos{t};
+%     whichStripe = NaN(1,length(pos));
+%     %Calculate nearest stripe
+%     for i = 1:length(pos)
+%         [~, whichStripe(i)] = min(abs(centroids(t-frameShift,:) - pos(i)));
+%     end
+%     whichStripe = whichStripe + stripeShift;
+%     
+%     %Put results into structure
+%     for s = firstStripe:lastStripe
+%         cpByStripe{s}.EllipsesFilteredPos{t - frameShift} =...
+%             pos(whichStripe==s);
+%     end
+% end
 
-%Repeat for unfiltered ellipses
-for t = firstFrame:lastFrame
-    pos = cp.EllipsePos{t};
-    whichStripe = NaN(1,length(pos));
-    %Calculate nearest stripe
-    for i = 1:length(pos)
-        [~, whichStripe(i)] = min(abs(centroids(t-frameShift,:) - pos(i)));
-    end
-    whichStripe = whichStripe + stripeShift;
-    
-    %Put results into structure
-    for s = firstStripe:lastStripe
-        cpByStripe{3,s}{t - frameShift} = pos(whichStripe==s);
-    end
-end
+

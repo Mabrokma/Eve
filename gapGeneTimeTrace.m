@@ -22,18 +22,18 @@ end
 
 
 for i = 1:4
-figure(i);
-%subplot(1,2,1);
-imagesc([0,1],[0,60], Gap.avgExp(:,:,i));
-title([Gap.Name{i}, ': Expression Pattern'])
-xlabel('AP Position (%EL)')
-ylabel('Time into nc14 (min)')
-% subplot(1,2,2);
-% imagesc([0,1],[0,60], Gap.noise(:,:,i));
-% title([Gap.Name{i}, ': Expression Noise'])
-% xlabel('AP Position (%EL)')
-% ylabel('Time into nc14 (min)')
-colormap jet; colorbar;
+    figure(i);
+    %subplot(1,2,1);
+    imagesc([0,1],[0,60], Gap.avgExp(:,:,i));
+    title([Gap.Name{i}, ': Expression Pattern'])
+    xlabel('AP Position (%EL)')
+    ylabel('Time into nc14 (min)')
+    % subplot(1,2,2);
+    % imagesc([0,1],[0,60], Gap.noise(:,:,i));
+    % title([Gap.Name{i}, ': Expression Noise'])
+    % xlabel('AP Position (%EL)')
+    % ylabel('Time into nc14 (min)')
+    colormap jet; colorbar;
 end
 
 
