@@ -7,6 +7,7 @@ function [cpByStripe, centroids] = sortStripes(cp, nStripes)
 %**************************************************************************
 %Use clustering to identify each stripe in an eve experiment, using the
 %CompiledParticles structure.  Allow user to edit stripe assignments.
+%-----> (Effectively a much better version of sortByStripe.m)
 %
 %Curation commands:
 %
@@ -22,6 +23,8 @@ function [cpByStripe, centroids] = sortStripes(cp, nStripes)
 %   '-' - recluster current frame with one less stripe
 %Figures are only regenerated after valid inputs, to save frustrating 
 %figure regeneration time
+%
+% Dependencies
 %**************************************************************************
 
 %Number of stripes exhibited by genotype - default is 7 but could be less

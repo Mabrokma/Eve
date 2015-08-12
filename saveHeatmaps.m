@@ -1,5 +1,5 @@
-%Save heatmaps as individual figures
 function [] = saveHeatmaps(genotype)
+%Save heatmaps as individual figures
 %Plot each type of heatmap on a different plot
 
 nEmbryos = length(genotype);

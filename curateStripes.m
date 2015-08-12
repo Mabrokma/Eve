@@ -1,4 +1,5 @@
 function [centroids, borders] = curateStripes(cp, centroids)
+%**************************************************************************
 %Curate the borders between eve stripes in a manner similar to
 %CheckParticleTracking()
 %Code responds to:
@@ -12,6 +13,7 @@ function [centroids, borders] = curateStripes(cp, centroids)
 %
 %And otherwise does nothing.  Figures are only regenerated after valid
 %inputs, to save frustrating figure regeneration time
+%**************************************************************************
 
 
 %Initialize borders

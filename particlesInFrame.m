@@ -1,5 +1,6 @@
 function [whichParticle, whichFrame, varargout] = ...
     particlesInFrame(CP, t, varargin)
+%**************************************************************************
 %Find out which particles exist in a given time point, t, and return the
 %proper indices for accessing these particles in the CompiledParticles
 %Structure.
@@ -10,6 +11,10 @@ function [whichParticle, whichFrame, varargout] = ...
 %CP(particles) is all particles in the frame
 %CP(particles(t).FIELD(frame(t))) is the value of the field for the given 
 %particle and frame
+%
+% Dependencies: none
+% RW 7/2015
+%**************************************************************************
 
 %Preallocate the maximum possible size
 whichParticle = NaN(1,length(CP));

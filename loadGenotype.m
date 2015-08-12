@@ -1,4 +1,11 @@
 function [genotype, avgGenotype] = loadGenotype(n)
+%**************************************************************************
+%This is the core format i'm using for post-analysis right now, each embryo
+%gets a 'genotype' struct, similar genotypes get stored in a struct array
+%for that genotype- this contains the original CompiledParticles structure
+%for reference if necessary, as well as the streamlined trace vectors
+%extracted by the other functions
+%
 %Load in a series of n CompiledParticles structures, extract the relevant
 %traces, and spit out the results as a single struct as well as the average
 %trace of the entire genotype.  The original compiled particles structure
@@ -7,7 +14,12 @@ function [genotype, avgGenotype] = loadGenotype(n)
 %
 %Relies on uigetdir to choose the locations of the CompiledParticles
 %structures and direct input to describe the genotype.  descriptions should
-%be a single (or use underscores/dashes)
+%not include spaces as they may be used in paths / as filenames
+%
+% Dependencies: extractTraces.m, averageTraces.m
+% RW 7/2015
+%**************************************************************************
+
 genotype(n) = struct('Name',[],'desc',[],'CP',[],...
     'rawTraces',[],'standardTraces',[],'binTraces',[],'binAllTraces',[]);
 
