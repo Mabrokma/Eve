@@ -17,42 +17,50 @@ function [whichCluster, fluoTrace, time] = ...
 %**************************************************************************
 
 %Allow for entering of a genotype structure instead of a trace/time combo
-
 if nargin == 1
     %Extract nuclear cycle 14 from raw traces
-    nc14 = genotype.rawTraces(genotype.CP.nc14:genotype.CP.nc14+100,...
+    fluoTrace= genotype.rawTraces(genotype.CP.nc14:genotype.CP.nc14+100,...
         [genotype.CP.CompiledParticles.nc] == 14,:);
-    fluoTrace = nc14(:,:,1)';
-    time = genotype.CP.ElapsedTime(genotype.CP.nc14:genotype.CP.nc14+100)...
+    time= genotype.CP.ElapsedTime(genotype.CP.nc14:genotype.CP.nc14+100)...
         - genotype.CP.ElapsedTime(genotype.CP.nc14);
 end
+
 
 %Control generation of figures
 figureFlag = 1;
 metric = 'sqeuclidean';
+validMetrics = ...
+    {'sqeuclidean', 'cityblock', 'correlation', 'cosine', 'hamming'};
 if nargin > 2
     for i = 1:length(varargin)
         if strcmpi(varargin{i}, 'nofigures')
             figureFlag = 0;
+        elseif any(cellfun(@(x)strcmpi(x,varargin{i}), validMetrics))
+            metric = varargin{i};
         end
     end
 end
 
 if figureFlag
     %Histogram nonzero fluorescences
-    fluoVector = genotype.rawTraces(:,:,1); fluoVector = fluoVector(:);
     binsize = 100;
-    [fluoHist, edges] = histcounts(fluoVector, binsize);
+    fluoVector = fluoTrace(:,:,1);
+    [fluoHist, edges] = histcounts(fluoVector(:), binsize);
     centers = edges + binsize/2; centers(end) = [];
     figure;
     plot(centers,fluoHist)
     axis([0 12000 0 750])
-    title(['Histogram of (nonzero) fluorescence intensities: '])
+    title('Histogram of (nonzero) fluorescence intensities')
+    xlabel('Fluo')
+    ylabel('Frequency')
 end
 
 
-%nucOn14 = ~isnan(fluonc14); %Logical array of on/off time points
-fluoTrace(isnan(fluoTrace)) = 0;
+if strcmpi(metric, 'hamming')
+    fluoTrace = ~isnan(fluoTrace);
+else
+    fluoTrace(isnan(fluoTrace(:,:,1)),1) = 0;
+end
 
 colors = [lines(7); 0 0 0];
 maxClusters = 8;
@@ -62,14 +70,14 @@ h = waitbar(0);
 for k = 2:maxClusters
     waitbar((k-1)/(maxClusters-1), h, ['Clustering with k = ', num2str(k)])
     %Cluster on the individual traces   
-    whichCluster{k-1} = kmeans(fluoTrace, k, 'Replicates', 10, ...
+    whichCluster{k-1} = kmeans(fluoTrace(:,:,1)', k, 'Replicates', 10, ...
         'distance', metric);
     [~, order] = sort(whichCluster{k-1});
     
     if figureFlag
         figure('Units', 'Normalized', 'Position', [0 0 1 1]);
         subplot(2,2,1)
-        imagesc(fluoTrace(order,:)'); colormap jet
+        imagesc(fluoTrace(:,order,1)); colormap jet
         title(['Individual Traces: ' num2str(k), ' clusters'])
         for i = 1:k
             hold on
@@ -96,15 +104,15 @@ for k = 2:maxClusters
         for i = 1:k
             subplot(2,2,2)
             hold on
-            plot(time, nanmean(fluoTrace(whichCluster{k-1} == i, :)),...
+            plot(time, nanmean(fluoTrace(:,whichCluster{k-1} == i),2),...
                 'Color',colors(i,:), 'LineWidth', 2);
             xlabel('Time')
             ylabel('Mean Fluorescence')
             leg{i} = ['Cluster ', num2str(i)];
             
             subplot(2,2,[3 4])
-            clusterHist = histcounts(...
-                nanmean(nc14(:,whichCluster{k-1}==i,3)), 0.2:0.01:0.85);
+            clusterHist = histcounts(nanmean(...
+                fluoTrace(:,whichCluster{k-1}==i,3)), 0.2:0.01:0.85);
             hold on
             plot(0.205:0.01:0.845, clusterHist,...
                 'Color', colors(i,:), 'LineWidth', 2)

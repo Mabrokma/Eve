@@ -24,7 +24,7 @@ function [rawTraces, standardTraces, binTraces, binAllTraces] = ...
 % RW 7/2015
 %**************************************************************************
 
-%Pares nc arg: only affects binTraces/ standardTraces
+%Parse nc arg: only affects binTraces/ standardTraces
 if nargin == 1
     nc = 14;
 end
