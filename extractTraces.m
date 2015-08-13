@@ -96,7 +96,7 @@ standardTraces(:,:,5) = cumsum(standardTraces(:,:,1));
 rawTraces(rawTraces == 0) = NaN;
 
 %Bin traces to create a single 60 x 100 x 4 array
-binTraces = NaN(length(queryTimes{nc-12}),length(cp.APbinID)-1,3);
+binTraces = zeros(length(queryTimes{nc-12}),length(cp.APbinID)-1,3);
 [~,~, bin] = histcounts(nanmean(standardTraces(:,:,4)),cp.APbinID);
 %Bin nuclei for calculating fractional activity
 if isfield(cp, 'EllipsesFilteredPos')

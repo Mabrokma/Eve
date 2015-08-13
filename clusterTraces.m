@@ -1,4 +1,5 @@
-function [whichCluster, nc14, time14] = clusterTraces(genotype, varargin)
+function [whichCluster, fluoTrace, time] = ...
+    clusterTraces(fluoTrace, time, varargin)
 %**************************************************************************
 % (Under development)
 %
@@ -15,10 +16,21 @@ function [whichCluster, nc14, time14] = clusterTraces(genotype, varargin)
 % RW 8/2015
 %**************************************************************************
 
+%Allow for entering of a genotype structure instead of a trace/time combo
+
+if nargin == 1
+    %Extract nuclear cycle 14 from raw traces
+    nc14 = genotype.rawTraces(genotype.CP.nc14:genotype.CP.nc14+100,...
+        [genotype.CP.CompiledParticles.nc] == 14,:);
+    fluoTrace = nc14(:,:,1)';
+    time = genotype.CP.ElapsedTime(genotype.CP.nc14:genotype.CP.nc14+100)...
+        - genotype.CP.ElapsedTime(genotype.CP.nc14);
+end
+
 %Control generation of figures
 figureFlag = 1;
 metric = 'sqeuclidean';
-if nargin > 1
+if nargin > 2
     for i = 1:length(varargin)
         if strcmpi(varargin{i}, 'nofigures')
             figureFlag = 0;
@@ -35,19 +47,12 @@ if figureFlag
     figure;
     plot(centers,fluoHist)
     axis([0 12000 0 750])
-    title(['Histogram of (nonzero) fluorescence intensities: ',...
-        genotype.Name])
+    title(['Histogram of (nonzero) fluorescence intensities: '])
 end
 
-%Extract nuclear cylce 14 from raw traces
-nc14 = genotype.rawTraces(genotype.CP.nc14:genotype.CP.nc14+100,...
-    [genotype.CP.CompiledParticles.nc] == 14,:);
-fluonc14 = nc14(:,:,1)';
-time14 = genotype.CP.ElapsedTime(genotype.CP.nc14:genotype.CP.nc14+100) ...
-    -genotype.CP.ElapsedTime(genotype.CP.nc14);
 
 %nucOn14 = ~isnan(fluonc14); %Logical array of on/off time points
-fluonc14(isnan(fluonc14)) = 0;
+fluoTrace(isnan(fluoTrace)) = 0;
 
 colors = [lines(7); 0 0 0];
 maxClusters = 8;
@@ -57,14 +62,14 @@ h = waitbar(0);
 for k = 2:maxClusters
     waitbar((k-1)/(maxClusters-1), h, ['Clustering with k = ', num2str(k)])
     %Cluster on the individual traces   
-    whichCluster{k-1} = kmeans(fluonc14, k, 'Replicates', 10, ...
+    whichCluster{k-1} = kmeans(fluoTrace, k, 'Replicates', 10, ...
         'distance', metric);
     [~, order] = sort(whichCluster{k-1});
     
     if figureFlag
         figure('Units', 'Normalized', 'Position', [0 0 1 1]);
         subplot(2,2,1)
-        imagesc(fluonc14(order,:)'); colormap jet
+        imagesc(fluoTrace(order,:)'); colormap jet
         title(['Individual Traces: ' num2str(k), ' clusters'])
         for i = 1:k
             hold on
@@ -91,7 +96,7 @@ for k = 2:maxClusters
         for i = 1:k
             subplot(2,2,2)
             hold on
-            plot(time14, nanmean(fluonc14(whichCluster{k-1} == i, :)),...
+            plot(time, nanmean(fluoTrace(whichCluster{k-1} == i, :)),...
                 'Color',colors(i,:), 'LineWidth', 2);
             xlabel('Time')
             ylabel('Mean Fluorescence')

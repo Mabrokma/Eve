@@ -31,7 +31,7 @@ usedScales = zeros(1,length(genotype)-1);
 MSDs = zeros(1,length(genotype)-1);
 
 % trial = 0;
-parfor i = 2:length(genotype)  
+parfor i = 2:length(genotype)
     %Simmulated Annealing Approach:
     objfun = @(x) calculateMSD(x(1), x(2), template, genotype(i));
     [params, MSDs(i-1), ~, output] = simulannealbnd(...
@@ -79,7 +79,7 @@ end
 function msd = calculateMSD(shift, scale, template, genotype)
 %Calculate image with given parameters,
 [~, test] = standardizeTraces(genotype, scale*(0:0.01:1) + shift);
-test = test(:,:,1);
+test = test(:,:,1)~=0;
 
 %Compare to unshifted image
 sd = (template/max(template(:)) - test/max(test(:))).^2;

@@ -38,7 +38,7 @@ standardTraces = interp1(dataTimes, rawTraces, queryTimes);
 standardTraces(:,:,5) = cumsum(standardTraces(:,:,1));
 
 %Bin traces to create a single 60 x 100 x 4 array
-binTraces = NaN(length(queryTimes),length(bins)-1,3);
+binTraces = zeros(length(queryTimes),length(bins)-1,3);
 [~,~, bin] = histcounts(nanmean(standardTraces(:,:,4)),bins);
 
 for x = 1:100
