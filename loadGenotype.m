@@ -23,11 +23,12 @@ function [genotype, avgGenotype] = loadGenotype(n)
 genotype(n) = struct('Name',[],'desc',[],'CP',[],...
     'rawTraces',[],'standardTraces',[],'binTraces',[],'binAllTraces',[]);
 
+desc = input('Input genotype descrption:\n?>','s');
 for i = 1:n
     loadPath = [uigetdir, '/CompiledParticles.mat'];
     slashes = strfind(loadPath, filesep);
     genotype(i).Name = loadPath(slashes(end-1)+1:slashes(end)-1);
-    genotype(i).desc = input('Input genotype descrption:\n?>','s');
+    genotype(i).desc = desc;
     genotype(i).CP = load(loadPath);
     [genotype(i).rawTraces, genotype(i).standardTraces, ...
         genotype(i).binTraces, genotype(i).binAllTraces] = ...

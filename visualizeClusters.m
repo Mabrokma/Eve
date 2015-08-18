@@ -1,4 +1,4 @@
-function visualizeClusters(genotype)
+function visualizeClusters(fluoTrace, time)
 %**************************************************************************
 %Allow for user to manually click through a virtual movie with the
 %particles colored according to clusters[].  clusters[] should have the
@@ -19,12 +19,18 @@ function visualizeClusters(genotype)
 %   's' - generate/save movie (loop through all t and use videowriter
 %   object to save each figure)
 %
-% Dependencies: none
+% Dependencies: clusterTraces
 % RW 8/2015
 %**************************************************************************
 
 %Call clusterTraces from within this function
-[clusters, rawTraces, time] = clusterTraces(genotype, 'nofigures');
+if nargin == 2
+    [clusters, rawTraces, time] = ...
+        clusterTraces(fluoTrace, time, 'nofigures');
+else
+    [clusters, rawTraces, time] = ...
+        clusterTraces(fluoTrace, 'nofigures');
+end
 
 %Extract relevant parameters from raw traces
 nFrames = size(rawTraces, 1);
@@ -137,7 +143,7 @@ particleFig = gcf;
 end
 
 function [clusterFig, traceFig] = ...
-    plotClusters(k, clusters, rawTraces, time14, clusterFig, traceFig)
+    plotClusters(k, clusters, rawTraces, time, clusterFig, traceFig)
 %Make plots showing behavior of clusters over time
 if nargin < 6
     clusterFig = figure('Units', 'Normalized', 'Position', [0 0 0.5 0.4]);
@@ -176,7 +182,7 @@ fluoTrace = rawTraces(:,:,1);
 fluoTrace(isnan(fluoTrace)) = 0;
 for i = 1:k
     hold on
-    plot(time14, mean(fluoTrace(:,clusters == i),2),...
+    plot(time, mean(fluoTrace(:,clusters == i),2),...
         'LineWidth', 2);
     xlabel('Frame Number')
     ylabel('Mean Fluorescence')

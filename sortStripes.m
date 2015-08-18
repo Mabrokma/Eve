@@ -21,8 +21,9 @@ function [cpByStripe, centroids] = sortStripes(cp, nStripes)
 %   'n' - shift all strieps right by one
 %   '+' - recluster current frame with one more stripe
 %   '-' - recluster current frame with one less stripe
-%Figures are only regenerated after valid inputs, to save frustrating 
-%figure regeneration time
+%
+% Figures are only regenerated after valid inputs, to save frustrating 
+% figure regeneration time
 %
 % Dependencies
 %**************************************************************************

@@ -1,5 +1,5 @@
-function [standardTraces, binTraces] = ...
-    standardizeTraces(genotype, bins, queryTimes)
+function [nc14, bin14, nc13, bin13] = ...
+    standardizeTraces(genotype, bins)
 %**************************************************************************
 %
 % Create standardized traces from the raw - query the linear interpolation
@@ -9,45 +9,77 @@ function [standardTraces, binTraces] = ...
 % Adapted from original extractTraces.m so that binning could be called w/o
 % the entire extractTraces function
 %
-% Dependencies: none (input must be a genotype structure from loadGenotype)
+% This implementation is really stupid right now but it works
+%
+% Dependencies: none
 % RW 8/2015
 %
 %**************************************************************************
 
-%Parse args
-if nargin == 1
+if nargin ~= 2
     bins = genotype.CP.APbinID;
-    queryTimes = 0:60;
-elseif nargin == 2
-    queryTimes = 0:60;
 end
 
-%Filter raw data for nc14
+%Filter raw data for nc14--------------------------------------------------
+
+queryTimes = 0:60;
+
 rawTraces = genotype.rawTraces(genotype.CP.nc14:end,:,:);
 filter14 = any(~isnan(rawTraces));
 rawTraces = rawTraces(:,filter14(1,:,1),:);
-rawTraces(isnan(rawTraces(:,:,1))) = 0;
 
 dataTimes = genotype.CP.ElapsedTime ...
     - genotype.CP.ElapsedTime(genotype.CP.nc14);
 dataTimes = dataTimes(dataTimes >= 0);
 
-standardTraces = interp1(dataTimes, rawTraces, queryTimes);
+[nc14, bin14] = standardize(dataTimes, queryTimes, bins, rawTraces);
 
-%Add integrated fluorescence 
-standardTraces(:,:,5) = cumsum(standardTraces(:,:,1));
+%Filter raw data for nc13--------------------------------------------------
+if genotype.CP.nc13 ~= 0
+    queryTimes = 0:25;
+    
+    rawTraces = ...
+        genotype.rawTraces(genotype.CP.nc13:genotype.CP.nc14-1,:,:);
+    filter13 = any(~isnan(rawTraces));
+    rawTraces = rawTraces(:,filter13(1,:,1),:);
+    
+    dataTimes = genotype.CP.ElapsedTime ...
+        - genotype.CP.ElapsedTime(genotype.CP.nc13);
+    dataTimes = dataTimes(dataTimes >= 0 & ...
+        dataTimes < dataTimes(genotype.CP.nc14));
+    
+    [nc13, bin13] = standardize(dataTimes, queryTimes, bins, rawTraces);
+else
+    nc13 = [];
+    bin13 = [];
+end
+
+end
+
+function [allTraces, binTraces] = ...
+    standardize(dataTimes, queryTimes, bins, rawTraces)
+%Remove NaNs in fluo
+rawTraces(isnan(rawTraces(:,:,1))) = 0;
+%Interpolate
+allTraces = interp1(dataTimes, rawTraces, queryTimes);
+
+%Add integrated fluorescence
+allTraces(:,:,6) = cumsum(allTraces(:,:,1));
+allTraces(:,:,7) = integrateWithDegradation(allTraces(:,:,1), 6);
 
 %Bin traces to create a single 60 x 100 x 4 array
 binTraces = zeros(length(queryTimes),length(bins)-1,3);
-[~,~, bin] = histcounts(nanmean(standardTraces(:,:,4)),bins);
+[~,~, whichBin] = histcounts(nanmean(allTraces(:,:,4)), bins);
 
 for x = 1:100
     %Total Fluorescence in bin
-    binTraces(:,x,1) = sum(standardTraces(:,bin==x,1),2);
+    binTraces(:,x,1) = sum(allTraces(:,whichBin==x,1),2);
     
     %Mean nonzero fluorescence in bin
-    binTraces(:,x,2) = nanmean(standardTraces(:,bin==x,1),2);
+    binTraces(:,x,2) = nanmean(allTraces(:,whichBin==x,1),2);
     
     %Total mRNA in bin at each time point
-    binTraces(:,x,3) = sum(standardTraces(:,bin==x,5),2);
+    binTraces(:,x,3) = sum(allTraces(:,whichBin==x,5),2);
+end
+
 end

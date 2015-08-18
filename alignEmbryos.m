@@ -16,7 +16,10 @@ function [alignedGenotype, avgAligned, allAligned] = ...
 % normalized to their respective maximum, included as a subfunction,
 % however any function can be passed that has the syntax 
 %   f(shift, scale, template, genotype)
-% where shift and scale are 
+% where template is the image to which the other embryos are aligned
+%
+% /Eve/Metrics/ contains a few other image comparison metrics, including
+% ssim, corr2, and a binary agreement metric
 % RW 8/2015
 %**************************************************************************
 totalTime = tic;
@@ -42,7 +45,9 @@ usedShifts = zeros(1,length(genotype)-1);
 usedScales = zeros(1,length(genotype)-1);
 function_vals = zeros(1,length(genotype)-1);
 
-%Separate timers for each embryo
+fprintf('\nAlgining embryos using "%s" as objective function...\n',...
+    func2str(objfun));
+
 parfor i = 2:length(genotype)
     thisTime = tic;
     %Create anonymous function with only shift and scale as parameters
@@ -64,7 +69,7 @@ parfor i = 2:length(genotype)
         i, output.iterations, toc(thisTime))
 
     alignedGenotype(i).rawTraces(:,:,3:4) = ...
-        (2-bestScale)*genotype(i).rawTraces(:,:,3:4) + bestShift;
+        (2-bestScale)*genotype(i).rawTraces(:,:,3:4) - bestShift;
     
     [alignedGenotype(i).standardTraces, alignedGenotype(i).binTraces] = ...
         standardizeTraces(alignedGenotype(i));
@@ -74,13 +79,15 @@ parfor i = 2:length(genotype)
 end
 
 %Print results
-fprintf('\nAlignment complete!\n %i Embryos aligned in %4.1f seconds\n',...
+fprintf('\nAlignment complete!\n\n')
+fprintf('  %i Embryos aligned in %4.1f seconds\n',...
     length(genotype)-1, toc(totalTime));
-fprintf('\n         Shift   | Scale  | Score\n')
+fprintf('\n          Shift   | Scale  | Score\n')
 for i = 1:length(genotype)-1
-    fprintf('Embryo %i: %4.4f | %5.4f | %4.3f\n',...
+    fprintf('Embryo %i: % 4.4f | %5.4f | %4.3f\n',...
         i+1, usedShifts(i), usedScales(i), function_vals(i))
 end
+fprintf('\n')
 
 %Generate figure to show how the alignment went
 [avgAligned, allAligned] = averageTraces(alignedGenotype);

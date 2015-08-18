@@ -28,6 +28,7 @@ end
 
 %Control generation of figures
 figureFlag = 1;
+saveFlag = 0;
 metric = 'sqeuclidean';
 validMetrics = ...
     {'sqeuclidean', 'cityblock', 'correlation', 'cosine', 'hamming'};
@@ -35,6 +36,12 @@ if nargin > 2
     for i = 1:length(varargin)
         if strcmpi(varargin{i}, 'nofigures')
             figureFlag = 0;
+        elseif strcmpi(varargin{i}, 'save')
+            saveFlag = 1;
+            saveFolder = input('Name save folder\n>?','s');
+            if ~exist(['Figures/Clustering/', saveFolder], 'dir')
+                mkdir(['Figures/Clustering/', saveFolder])
+            end
         elseif any(cellfun(@(x)strcmpi(x,varargin{i}), validMetrics))
             metric = varargin{i};
         end
@@ -53,6 +60,9 @@ if figureFlag
     title('Histogram of (nonzero) fluorescence intensities')
     xlabel('Fluo')
     ylabel('Frequency')
+    if saveFlag
+        export_fig(sprintf('Figures/Clustering/%s/hist.png', saveFolder))
+    end
 end
 
 
@@ -125,12 +135,13 @@ for k = 2:maxClusters
         subplot(2,2,[3 4])
         title('Position histogram by Cluster')
         legend(leg, 'Location', 'Best')
+        if saveFlag
+            export_fig(sprintf('Figures/Clustering/%s/k%i.png',...
+                saveFolder, k))
+        end
     end
 end
 delete(h)
 
-%** TODO 
-
-%Plot all individual traces in colors corresponding to stripe assignment??
 
 %Plot all individual traces in colors corresponding to location in stripe??
