@@ -18,10 +18,12 @@ cp = load(loadPath);
 %Name of files
 eve.Name = Prefix;
 %One word to describe genotype
-eve.desc = input('Enter description for genotype\n?>>','s');
+eve.desc = input('Enter description for genotype\n?>> ','s');
 %Original structure
 eve.CP = cp;
 %Raw Traces
 [eve.rawTraces, eve.binTraces] = extractTraces(cp);
-%Standardtraces
+%Standard traces
 [eve.nc14, eve.bin14, eve.nc13, eve.bin14] = standardizeTraces(eve);
+%Stripe assignments
+eve.stripes = sortStripes(eve.CP);

@@ -1,4 +1,4 @@
-function [cpByStripe, centroids] = sortStripes(cp, nStripes)
+function [stripes] = sortStripes(cp, nStripes)
 %INFRASTRUCTURE / GUI COMPLETE; ACTUAL ASSIGNMENT TO STRUCTURES INCOMPLETE
 %-------Also had a thought to draw lines through the heatmap to separate
 %stripes? may be a lot easier/faster.  At least show heatmap with lines
@@ -113,7 +113,10 @@ particleFig = ...
     'Color', bg, 'MenuBar', 'None', 'ToolBar', 'None',...
     'NumberTitle', 'off');%, 'WindowStyle', 'Modal');
 histFig = ...
-    figure('Units', 'Normalized', 'Position', [0 0 1, 0.4],...
+    figure('Units', 'Normalized', 'Position', [0 0 0.6, 0.4],...
+    'MenuBar', 'None', 'ToolBar', 'None', 'NumberTitle', 'off');
+heatFig = ...
+    figure('Units', 'Normalized', 'Position', [0.6 0 0.4 0.4],...
     'MenuBar', 'None', 'ToolBar', 'None', 'NumberTitle', 'off');
 
 while true
@@ -166,6 +169,10 @@ while true
     end
     axis([0.2 0.85 0 10])
     
+    % **** generate heatFig ****
+%     
+%     figure(heatFig)
+%     cla; hold on;
     % **** User control ****
     
     %Get user input; do nothing unless input key is valid (see above)
