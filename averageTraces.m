@@ -3,7 +3,7 @@ function [avgTrace, allTraces, noise] = averageTraces(genotype)
 %TODO - Align stripes before averaging?
 
 %Concatenate all traces
-allTraces = [genotype.standardTraces];
+allTraces = [genotype.nc14];
 
 %Bin concatenated traces as if it were a single embryo
 %Bin traces to create a single 60 x 100 x 4 array

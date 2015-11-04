@@ -1,16 +1,13 @@
-function [whichCluster, fluoTrace, time] = ...
+function [whichCluster, centroids, fluoTrace, time] = ...
     clusterTraces(fluoTrace, time, varargin)
 %**************************************************************************
 % (Under development)
 %
 % Takes a (single) genotype struct and clusters individual fluorescence
-% traces using kmeans with k = 2:8, makes a bunch of figures.  Metric is
-% specified in the kmeans command (line 44ish) and can be changed,
-% currently sqeuclidean.  nucOn14[] is a binary vector specifying on/off
-% times, can be used in clustering?
+% traces using kmeans with k = 2:8, makes a bunch of figures.  nucOn14[] is
+% a logical vector specifying on/off times, can be used in clustering?
 % 
-% Currently a rough version that isn't super readable, I intend to clean up
-% all the multi-level struct references
+% Legacy support for genotype structure may not be necessary / functional
 %
 % Dependencies: none
 % RW 8/2015
@@ -18,6 +15,7 @@ function [whichCluster, fluoTrace, time] = ...
 
 %Allow for entering of a genotype structure instead of a trace/time combo
 if nargin == 1
+    genotype = fluoTrace;
     %Extract nuclear cycle 14 from raw traces
     fluoTrace= genotype.rawTraces(genotype.CP.nc14:genotype.CP.nc14+100,...
         [genotype.CP.CompiledParticles.nc] == 14,:);
@@ -27,20 +25,25 @@ end
 
 
 %Control generation of figures
-figureFlag = 1;
+plotFlag = 1;
 saveFlag = 0;
 metric = 'sqeuclidean';
 validMetrics = ...
     {'sqeuclidean', 'cityblock', 'correlation', 'cosine', 'hamming'};
 if nargin > 2
     for i = 1:length(varargin)
-        if strcmpi(varargin{i}, 'nofigures')
-            figureFlag = 0;
+        if strcmpi(varargin{i}, 'noplot')
+            plotFlag = 0;
         elseif strcmpi(varargin{i}, 'save')
             saveFlag = 1;
             saveFolder = input('Name save folder\n>?','s');
             if ~exist(['Figures/Clustering/', saveFolder], 'dir')
                 mkdir(['Figures/Clustering/', saveFolder])
+            else
+                warning(['Folder already exists,',...
+                    'this may overwrite existing figures.'])
+                fprintf('Press any key to continue...\n')
+                pause;
             end
         elseif any(cellfun(@(x)strcmpi(x,varargin{i}), validMetrics))
             metric = varargin{i};
@@ -48,7 +51,7 @@ if nargin > 2
     end
 end
 
-if figureFlag
+if plotFlag
     %Histogram nonzero fluorescences
     binsize = 100;
     fluoVector = fluoTrace(:,:,1);
@@ -69,22 +72,24 @@ end
 if strcmpi(metric, 'hamming')
     fluoTrace = ~isnan(fluoTrace);
 else
-    fluoTrace(isnan(fluoTrace(:,:,1)),1) = 0;
+    fluoTrace(isnan(fluoTrace(:,:,1))) = 0;
 end
 
 colors = [lines(7); 0 0 0];
 maxClusters = 8;
-whichCluster = cell(1, maxClusters);
+whichCluster = cell(1, maxClusters-1);
+centroids = cell(1, maxClusters-1);
 
 h = waitbar(0);
 for k = 2:maxClusters
     waitbar((k-1)/(maxClusters-1), h, ['Clustering with k = ', num2str(k)])
     %Cluster on the individual traces   
-    whichCluster{k-1} = kmeans(fluoTrace(:,:,1)', k, 'Replicates', 10, ...
-        'distance', metric);
+    [whichCluster{k-1}, centroids{k-1}] = kmeans(fluoTrace(:,:,1)',...
+        k, 'Replicates', 10, 'distance', metric);
+    
     [~, order] = sort(whichCluster{k-1});
     
-    if figureFlag
+    if plotFlag
         figure('Units', 'Normalized', 'Position', [0 0 1 1]);
         subplot(2,2,1)
         imagesc(fluoTrace(:,order,1)); colormap jet
@@ -122,9 +127,9 @@ for k = 2:maxClusters
             
             subplot(2,2,[3 4])
             clusterHist = histcounts(nanmean(...
-                fluoTrace(:,whichCluster{k-1}==i,3)), 0.2:0.01:0.85);
+                fluoTrace(:,whichCluster{k-1}==i,3)), 0:0.01:1);
             hold on
-            plot(0.205:0.01:0.845, clusterHist,...
+            plot(0.005:0.01:0.995, clusterHist,...
                 'Color', colors(i,:), 'LineWidth', 2)
             xlabel('AP Position')
             ylabel('Frequency')
@@ -144,4 +149,3 @@ end
 delete(h)
 
 
-%Plot all individual traces in colors corresponding to location in stripe??

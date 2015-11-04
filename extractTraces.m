@@ -31,9 +31,16 @@ rawTraces = NaN(traceLength, nParticles, 4);
 
 %Get positions and fluorescences of each particle in each frame
 for t = 1:length(cp.ElapsedTime)
-    [idx,~,fluo,fluoError,pPos,nPos,yPos] = ...
-        particlesInFrame(cp.CompiledParticles,t,...
-        'Fluo','FluoError','APposParticle','APpos', 'yPos');
+    try
+        [idx,~,fluo,fluoError,pPos,nPos,yPos] = ...
+            particlesInFrame(cp.CompiledParticles,t,...
+            'Fluo','FluoError','APposParticle','APpos', 'yPos');
+    catch
+        %Old formats may not have APposParticle named as such
+        [idx,~,fluo,fluoError,pPos,nPos,yPos] = ...
+            particlesInFrame(cp.CompiledParticles,t,...
+            'Fluo','FluoError','APpos','APpos', 'yPos');
+    end
     
     if ~isempty(idx) 
         rawTraces(t, idx, 1) = fluo;

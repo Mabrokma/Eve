@@ -67,19 +67,38 @@ allTraces = interp1(dataTimes, rawTraces, queryTimes);
 allTraces(:,:,6) = cumsum(allTraces(:,:,1));
 allTraces(:,:,7) = integrateWithDegradation(allTraces(:,:,1), 6);
 
+
 %Bin traces to create a single 60 x 100 x 4 array
 binTraces = zeros(length(queryTimes),length(bins)-1,3);
-[~,~, whichBin] = histcounts(nanmean(allTraces(:,:,4)), bins);
 
-for x = 1:100
-    %Total Fluorescence in bin
-    binTraces(:,x,1) = sum(allTraces(:,whichBin==x,1),2);
+%**THIS METHOD KEEPS THE AP POSITION CONSTANT OVER TIME
+% [~,~, whichBin] = histcounts(nanmean(allTraces(:,:,4)), bins);
+% 
+% for x = 1:length(bins)-1
+%     %Total Fluorescence in bin
+%     binTraces(:,x,1) = sum(allTraces(:,whichBin==x,1),2);
+%     
+%     %Mean nonzero fluorescence in bin
+%     binTraces(:,x,2) = nanmean(allTraces(:,whichBin==x,1),2);
+%     
+%     %Total mRNA in bin at each time point
+%     binTraces(:,x,3) = sum(allTraces(:,whichBin==x,7),2);
+% end
+
+%**THIS METHOD ALLOWS NUCLEI TO WIGGLE, IS SLOWER
+for t = 1:length(queryTimes)
+    [~,~, whichBin] = histcounts(allTraces(t,:,4), bins);
     
-    %Mean nonzero fluorescence in bin
-    binTraces(:,x,2) = nanmean(allTraces(:,whichBin==x,1),2);
-    
-    %Total mRNA in bin at each time point
-    binTraces(:,x,3) = sum(allTraces(:,whichBin==x,5),2);
+    for x = 1:length(bins)-1
+        %Total Fluorescence in bin
+        binTraces(t,x,1) = nansum(allTraces(t,whichBin==x,1));
+        
+        %Mean nonzero fluorescence in bin
+        binTraces(t,x,2) = nanmean(allTraces(t,whichBin==x,1));
+        
+        %Total mRNA in bin at each time point
+        binTraces(t,x,3) = nansum(allTraces(t,whichBin==x,7));
+    end
 end
 
 end
